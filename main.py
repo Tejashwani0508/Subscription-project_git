@@ -4,7 +4,7 @@ from typing import List
 
 from database import engine, get_db, Base
 from models import Subscription
-from schemas import SubscriptionCreate, SubscriptionResponse, SubscriptionUpdate
+from schemas import SubscriptionCreate, SubscriptionResponse, SubscriptionUpdate, DashboardResponse
 import crud
 
 # Create tables
@@ -22,6 +22,13 @@ app = FastAPI(
 @app.get("/", tags=["Root"])
 def read_root():
     return {"message": "Welcome to Subscription Management System API"}
+
+# DASHBOARD - Get dashboard overview
+@app.get("/dashboard", response_model=DashboardResponse, tags=["Dashboard"])
+def get_dashboard(db: Session = Depends(get_db)):
+    """Get dashboard overview with total spend, subscriptions, and upcoming renewals"""
+    dashboard_data = crud.get_dashboard_data(db=db)
+    return dashboard_data
 
 # CREATE - Add a new subscription
 @app.post("/subscriptions", response_model=SubscriptionResponse, status_code=status.HTTP_201_CREATED, tags=["Subscriptions"])

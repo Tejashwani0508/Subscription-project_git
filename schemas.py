@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 from datetime import date
-from typing import Optional
+from typing import Optional, List
 
 class SubscriptionBase(BaseModel):
     title: str
@@ -26,3 +26,17 @@ class SubscriptionResponse(SubscriptionBase):
     
     class Config:
         from_attributes = True
+
+class SubscriptionWithDaysLeft(SubscriptionResponse):
+    days_left: int
+    is_active: bool
+
+class UpcomingRenewal(SubscriptionResponse):
+    days_until_renewal: int
+
+class DashboardResponse(BaseModel):
+    total_monthly_spend: float
+    total_subscriptions: int
+    active_subscriptions: int
+    subscriptions: List[SubscriptionWithDaysLeft]
+    upcoming_renewals: List[UpcomingRenewal]
