@@ -1,8 +1,12 @@
 from fastapi import FastAPI, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List
+from datetime import datetime, timedelta
+import threading
+import logging
+import time
 
-from database import engine, get_db, Base
+from database import engine, get_db, Base, SessionLocal
 from models import Subscription
 from schemas import SubscriptionCreate, SubscriptionResponse, SubscriptionUpdate, DashboardResponse
 import crud
@@ -50,6 +54,18 @@ def get_all_subscriptions(
     subscriptions = crud.get_all_subscriptions(db=db, skip=skip, limit=limit)
     return subscriptions
 
+# SEARCH - Find subscriptions by title
+@app.get("/subscriptions/search", response_model=List[SubscriptionResponse], tags=["Subscriptions"])
+def search_subscriptions(
+    title: str,
+    skip: int = 0,
+    limit: int = 100,
+    db: Session = Depends(get_db)
+):
+    """Search subscriptions by title (case-insensitive substring match)"""
+    subscriptions = crud.search_subscriptions_by_title(db=db, title=title, skip=skip, limit=limit)
+    return subscriptions
+
 # READ - Get a specific subscription
 @app.get("/subscriptions/{subscription_id}", response_model=SubscriptionResponse, tags=["Subscriptions"])
 def get_subscription(
@@ -95,6 +111,52 @@ def delete_subscription(
             detail=f"Subscription with id {subscription_id} not found"
         )
     return None
+
+# Background renewal checker
+renewal_stop_event = threading.Event()
+
+def notify_renewal(sub):
+    # replace this with email/SMS/push when integrated
+    logging.info(
+        f"[Renewal Notification] Subscription '{sub.title}' (id={sub.id}) renews in {(sub.end_date - datetime.now().date()).days} days at {sub.end_date}"
+    )
+
+
+def run_daily_renewal_check():
+    logging.info("Starting subscription renewal scheduler")
+
+    while not renewal_stop_event.is_set():
+        try:
+            db = SessionLocal()
+            upcoming = crud.get_renewals_within_days(db=db, days=3)
+            if upcoming:
+                for sub in upcoming:
+                    notify_renewal(sub)
+            else:
+                logging.debug("No subscriptions renewing in the next 3 days")
+        except Exception as e:
+            logging.error(f"Error during renewal check: {e}")
+        finally:
+            db.close()
+
+        # Sleep for 24 hours or until cancellation
+        if renewal_stop_event.wait(24 * 60 * 60):
+            break
+
+
+@app.on_event("startup")
+def startup_event():
+    app.state.renewal_thread = threading.Thread(target=run_daily_renewal_check, daemon=True)
+    app.state.renewal_thread.start()
+
+
+@app.on_event("shutdown")
+def shutdown_event():
+    renewal_stop_event.set()
+    thread = getattr(app.state, "renewal_thread", None)
+    if thread is not None and thread.is_alive():
+        thread.join(timeout=10)
+
 
 if __name__ == "__main__":
     import uvicorn

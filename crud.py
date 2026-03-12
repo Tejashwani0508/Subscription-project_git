@@ -18,6 +18,11 @@ def get_subscription(db: Session, subscription_id: int) -> Subscription:
 def get_all_subscriptions(db: Session, skip: int = 0, limit: int = 100) -> list:
     return db.query(Subscription).offset(skip).limit(limit).all()
 
+# SEARCH
+def search_subscriptions_by_title(db: Session, title: str, skip: int = 0, limit: int = 100) -> list:
+    query = db.query(Subscription).filter(Subscription.title.ilike(f"%{title}%"))
+    return query.offset(skip).limit(limit).all()
+
 # UPDATE
 def update_subscription(db: Session, subscription_id: int, subscription: SubscriptionUpdate) -> Subscription:
     db_subscription = db.query(Subscription).filter(Subscription.id == subscription_id).first()
@@ -44,6 +49,16 @@ def delete_subscription(db: Session, subscription_id: int) -> bool:
     return True
 
 # DASHBOARD
+def get_renewals_within_days(db: Session, days: int = 3) -> list:
+    """Return subscriptions with end_date from today up to today + days"""
+    today = date.today()
+    cutoff = today + timedelta(days=days)
+    return db.query(Subscription).filter(
+        Subscription.end_date >= today,
+        Subscription.end_date <= cutoff
+    ).all()
+
+
 def get_dashboard_data(db: Session) -> dict:
     """
     Get comprehensive dashboard data including:
