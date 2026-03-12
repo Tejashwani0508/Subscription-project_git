@@ -34,6 +34,18 @@ def get_dashboard(db: Session = Depends(get_db)):
     dashboard_data = crud.get_dashboard_data(db=db)
     return dashboard_data
 
+# SEARCH - Search subscriptions by title
+@app.get("/subscriptions/search", response_model=List[SubscriptionResponse], tags=["Subscriptions"])
+def search_subscriptions(
+    title: str,
+    skip: int = 0,
+    limit: int = 100,
+    db: Session = Depends(get_db)
+):
+    """Search subscriptions by title (case-insensitive partial match)"""
+    subscriptions = crud.search_subscriptions_by_title(db=db, title=title, skip=skip, limit=limit)
+    return subscriptions
+
 # CREATE - Add a new subscription
 @app.post("/subscriptions", response_model=SubscriptionResponse, status_code=status.HTTP_201_CREATED, tags=["Subscriptions"])
 def create_subscription(

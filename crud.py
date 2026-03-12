@@ -20,8 +20,10 @@ def get_all_subscriptions(db: Session, skip: int = 0, limit: int = 100) -> list:
 
 # SEARCH
 def search_subscriptions_by_title(db: Session, title: str, skip: int = 0, limit: int = 100) -> list:
-    query = db.query(Subscription).filter(Subscription.title.ilike(f"%{title}%"))
-    return query.offset(skip).limit(limit).all()
+    """Search subscriptions by title (case-insensitive partial match)"""
+    return db.query(Subscription).filter(
+        Subscription.title.ilike(f"%{title}%")
+    ).offset(skip).limit(limit).all()
 
 # UPDATE
 def update_subscription(db: Session, subscription_id: int, subscription: SubscriptionUpdate) -> Subscription:
