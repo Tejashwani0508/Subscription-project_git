@@ -62,6 +62,18 @@ def get_all_subscriptions(
     subscriptions = crud.get_all_subscriptions(db=db, skip=skip, limit=limit)
     return subscriptions
 
+# SEARCH - Find subscriptions by title
+@app.get("/subscriptions/search", response_model=List[SubscriptionResponse], tags=["Subscriptions"])
+def search_subscriptions(
+    title: str,
+    skip: int = 0,
+    limit: int = 100,
+    db: Session = Depends(get_db)
+):
+    """Search subscriptions by title (case-insensitive substring match)"""
+    subscriptions = crud.search_subscriptions_by_title(db=db, title=title, skip=skip, limit=limit)
+    return subscriptions
+
 # READ - Get a specific subscription
 @app.get("/subscriptions/{subscription_id}", response_model=SubscriptionResponse, tags=["Subscriptions"])
 def get_subscription(
