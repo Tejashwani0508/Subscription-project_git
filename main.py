@@ -1,10 +1,14 @@
 from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 from typing import List
 from datetime import datetime, timedelta
 import threading
 import logging
 import time
+import os
 
 from database import engine, get_db, Base, SessionLocal
 from models import Subscription
@@ -20,6 +24,24 @@ app = FastAPI(
     description="API for managing subscriptions with CRUD operations",
     version="1.0.0"
 )
+
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Serve dashboard
+@app.get("/dashboard-ui", tags=["Dashboard"])
+async def serve_dashboard():
+    """Serve the dashboard UI"""
+    dashboard_path = os.path.join(os.path.dirname(__file__), "index.html")
+    if os.path.exists(dashboard_path):
+        return FileResponse(dashboard_path)
+    return {"error": "Dashboard not found"}
 
 # CRUD Endpoints
 
